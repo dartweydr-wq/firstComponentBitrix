@@ -23,22 +23,30 @@ class DartTestComponent extends CBitrixComponent
         return true;
     }
 
+    /**
+     * Вывод данных из Highblock
+     */
     public function GetHighLoadBlockData()
     {
         global $USER;
+        global $CACHE_MANAGER;
         $arParams = $this->arParams;
 
         $cache_id = md5(serialize($arParams));
-        $cache_dir = '/'.$USER->GetID().'/';
-        $path = '/test22';
+        //$cache_dir = '/'.$USER->GetID().'/';
+        //$cacheId = 'myUniqueCacheId';
+        $path = 'my/cache/path';
         $obCache = new CPHPCache;
 
         if($obCache->InitCache($arParams['CACHE_TIME'], $cache_id, $path))
         {
             $outPropertyBlock = $obCache->GetVars();
         }
-        elseif ( $obCache->StartDataCache() )
+        else
         {
+            $CACHE_MANAGER->StartTagCache($path);
+            $CACHE_MANAGER->RegisterTag('highblock_id_' . $arParams['HIGHLOAD_TYPE']);
+
             $hlBlockItems = HL\HighloadBlockTable::getById($arParams['HIGHLOAD_TYPE'])->fetch();
             $entity = HL\HighloadBlockTable::compileEntity($hlBlockItems);
             $entity_data_class = $entity->getDataClass();
@@ -52,12 +60,19 @@ class DartTestComponent extends CBitrixComponent
                         '=UF_USER_ACTIVE' => ($arParams['OUT_USER_ADDRESS'] == 'Y') ? 1 : [1, 0]
                     ],
                 ))->fetchAll();
-                $obCache->EndDataCache($outPropertyBlock);
+
+                $CACHE_MANAGER->EndTagCache();
+
+                if ( $obCache->StartDataCache() )
+                    $obCache->EndDataCache($outPropertyBlock);
             }
         }
         return $outPropertyBlock;
     }
 
+    /**
+     * Проверка модулей и выбора блока
+     */
     public function CheckModuleParams()
     {
         // проверка модулей
